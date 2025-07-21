@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Display Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .before, .after {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .before {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        .after {
+            background-color: #e8f5e8;
+            border-left: 4px solid #4caf50;
+        }
+        .parameter-display {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .parameter-key {
+            color: #1976d2;
+            font-weight: bold;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-words;
+        }
+    </style>
+</head>
+<body>
+    <h1>Object Parameter Display Fix Test</h1>
+    
+    <div class="test-section">
+        <h2>Problem Description</h2>
+        <p>Previously, when function call parameters contained objects, they were displayed as "[object Object]" instead of showing the actual object contents.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Before Fix</h2>
+        <div class="before">
+            <h3>❌ Old behavior (broken)</h3>
+            <div class="parameter-display">
+                <div><span class="parameter-key">location:</span> San Francisco</div>
+                <div><span class="parameter-key">options:</span> [object Object]</div>
+                <div><span class="parameter-key">filters:</span> [object Object]</div>
+            </div>
+            <p><strong>Issue:</strong> Complex parameters were unreadable</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>After Fix</h2>
+        <div class="after">
+            <h3>✅ New behavior (fixed)</h3>
+            <div class="parameter-display">
+                <div><span class="parameter-key">location:</span> San Francisco</div>
+                <div>
+                    <span class="parameter-key">options:</span>
+                    <pre style="display: inline-block; margin: 0; padding: 5px;">{
+  "units": "metric",
+  "include_forecast": true,
+  "days": 5
+}</pre>
+                </div>
+                <div>
+                    <span class="parameter-key">filters:</span>
+                    <pre style="display: inline-block; margin: 0; padding: 5px;">{
+  "temperature_range": {
+    "min": 10,
+    "max": 30
+  },
+  "conditions": ["sunny", "cloudy"]
+}</pre>
+                </div>
+            </div>
+            <p><strong>Solution:</strong> Objects are now properly serialized with JSON.stringify() and formatted with indentation</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Technical Implementation</h2>
+        <p>The fix was implemented in <code>client/src/components/Chatbot.tsx</code> by replacing:</p>
+        <pre><code>// Before (broken)
+{String(value)}
+
+// After (fixed)
+{typeof value === 'object' && value !== null ? (
+  &lt;pre className="inline-block whitespace-pre-wrap break-words"&gt;
+    {JSON.stringify(value, null, 2)}
+  &lt;/pre&gt;
+) : (
+  &lt;span className="break-words"&gt;{String(value)}&lt;/span&gt;
+)}</code></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Benefits</h2>
+        <ul>
+            <li>✅ Object parameters are now readable and properly formatted</li>
+            <li>✅ JSON structure is preserved with proper indentation</li>
+            <li>✅ Nested objects and arrays are fully visible</li>
+            <li>✅ Non-object values still display correctly</li>
+            <li>✅ Responsive design with word wrapping for long values</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Test the Fix</h2>
+        <p>To test this fix in the actual application:</p>
+        <ol>
+            <li>Go to <a href="http://localhost:3001/chat" target="_blank">http://localhost:3001/chat</a></li>
+            <li>Ask for weather information: "What's the weather in San Francisco?"</li>
+            <li>Ask for book search: "Find books by Isaac Asimov"</li>
+            <li>Observe that function call parameters are now properly displayed with readable object structures</li>
+        </ol>
+    </div>
+</body>
+</html>
