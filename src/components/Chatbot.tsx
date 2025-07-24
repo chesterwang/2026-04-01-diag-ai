@@ -1,8 +1,21 @@
 'use client';
-
-import { useChat } from '@ai-sdk/react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { MermaidDiagram } from './MermaidDiagram';
+
+// Types for structured Mermaid response
+interface MermaidResponse {
+  mermaidCode: string;
+  thinking: string;
+  title: string;
+}
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content?: string;
+  mermaidResponse?: MermaidResponse;
+}
 
 // Function to parse text and extract Mermaid code blocks
 function parseTextWithMermaid(text: string) {
@@ -41,207 +54,168 @@ function parseTextWithMermaid(text: string) {
   return parts;
 }
 
-// Component to render individual message parts including tool calls
-function MessageRenderer({ message }: { message: any }) {
-  // Debug logging to understand message structure
-  if (message.role === 'assistant') {
-    console.log('Assistant message:', {
-      content: message.content,
-      toolInvocations: message.toolInvocations,
-      parts: message.parts,
-      fullMessage: message
-    });
-  }
-  const renderToolInvocation = (toolInvocation: any) => {
-    const { toolName, args, state, result } = toolInvocation;
-
+// Component to render individual message parts including structured responses
+function MessageRenderer({ message }: { message: ChatMessage }) {
+  // Handle user messages
+  if (message.role === 'user') {
     return (
-      <div key={toolInvocation.toolCallId} className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-            {toolName}
-          </span>
-          {state === 'call' && (
-            <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-              <div className="animate-spin rounded-full h-3 w-3 border border-blue-500 border-t-transparent"></div>
-              <span>Running...</span>
-            </div>
-          )}
-          {state === 'result' && (
-            <span className="text-xs text-green-600 dark:text-green-400">✓ Complete</span>
-          )}
-        </div>
-
-        {args && Object.keys(args).length > 0 && (
-          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-            <strong>Parameters:</strong>
-            <div className="mt-1 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded text-xs">
-              {Object.entries(args).map(([key, value]) => (
-                <div key={key} className="mb-1 last:mb-0">
-                  <span className="text-blue-600 dark:text-blue-400">{key}:</span>{' '}
-                  {typeof value === 'object' && value !== null ? (
-                    <pre className="inline-block whitespace-pre-wrap break-words text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded">
-                      {JSON.stringify(value, null, 2)}
-                    </pre>
-                  ) : (
-                    <span className="break-words">{String(value)}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {state === 'result' && result && (
-          <div className="text-sm text-gray-700 dark:text-gray-300">
-            <strong>Result:</strong>
-            <div className="mt-1 p-2 bg-white dark:bg-gray-800 rounded border">
-              {Array.isArray(result) ? (
-                result.map((item: any, index: number) => (
-                  <div key={index} className="mb-2 last:mb-0">
-                    {item.type === 'text' ? (
-                      <div className="whitespace-pre-wrap">{item.text}</div>
-                    ) : (
-                      <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded overflow-x-auto">
-                        {JSON.stringify(item, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="whitespace-pre-wrap">
-                  {typeof result === 'string' ? result : (
-                    <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded overflow-x-auto">
-                      {JSON.stringify(result, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="whitespace-pre-wrap">
+        {message.content}
       </div>
     );
-  };
+  }
 
-  const renderMessageParts = () => {
-    // If the message has parts, render them
-    if (message.parts && message.parts.length > 0) {
-      return message.parts.map((part: any, index: number) => {
-        switch (part.type) {
-          case 'text':
-            // Parse text for Mermaid diagrams
-            const textParts = parseTextWithMermaid(part.text);
+  // Handle assistant messages with structured Mermaid response
+  if (message.role === 'assistant' && message.mermaidResponse) {
+    const { mermaidCode, thinking, title } = message.mermaidResponse;
+
+    return (
+      <div className="space-y-4">
+        {/* Thinking/Explanation Section */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              AI Reasoning
+            </span>
+          </div>
+          <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+            {thinking}
+          </div>
+        </div>
+
+        {/* Mermaid Diagram Section */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+              {title}
+            </h3>
+          </div>
+          <MermaidDiagram chart={mermaidCode} />
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for regular text content
+  if (message.content) {
+    const textParts = parseTextWithMermaid(message.content);
+    return (
+      <div>
+        {textParts.map((textPart, textIndex) => {
+          if (textPart.type === 'mermaid') {
             return (
-              <div key={index}>
-                {textParts.map((textPart, textIndex) => {
-                  if (textPart.type === 'mermaid') {
-                    return (
-                      <div key={textIndex} className="my-4">
-                        <MermaidDiagram chart={textPart.content} />
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div key={textIndex} className="whitespace-pre-wrap">
-                        {textPart.content}
-                      </div>
-                    );
-                  }
-                })}
+              <div key={textIndex} className="my-4">
+                <MermaidDiagram chart={textPart.content} />
               </div>
             );
-          case 'tool-invocation':
-            return renderToolInvocation(part.toolInvocation);
-          default:
-            return null;
-        }
-      });
-    }
-
-    // Fallback: render tool invocations and content separately
-    const elements = [];
-
-    if (message.toolInvocations && message.toolInvocations.length > 0) {
-      elements.push(
-        ...message.toolInvocations.map((toolInvocation: any) =>
-          renderToolInvocation(toolInvocation)
-        )
-      );
-    }
-
-    if (message.content) {
-      // Parse content for Mermaid diagrams
-      const contentParts = parseTextWithMermaid(message.content);
-      elements.push(
-        <div key="content">
-          {contentParts.map((contentPart, contentIndex) => {
-            if (contentPart.type === 'mermaid') {
-              return (
-                <div key={contentIndex} className="my-4">
-                  <MermaidDiagram chart={contentPart.content} />
-                </div>
-              );
-            } else {
-              return (
-                <div key={contentIndex} className="whitespace-pre-wrap">
-                  {contentPart.content}
-                </div>
-              );
-            }
-          })}
-        </div>
-      );
-    }
-
-    return elements.length > 0 ? elements : (
-      message.content ? (
-        <div>
-          {parseTextWithMermaid(message.content).map((contentPart, contentIndex) => {
-            if (contentPart.type === 'mermaid') {
-              return (
-                <div key={contentIndex} className="my-4">
-                  <MermaidDiagram chart={contentPart.content} />
-                </div>
-              );
-            } else {
-              return (
-                <div key={contentIndex} className="whitespace-pre-wrap">
-                  {contentPart.content}
-                </div>
-              );
-            }
-          })}
-        </div>
-      ) : null
+          } else {
+            return (
+              <div key={textIndex} className="whitespace-pre-wrap">
+                {textPart.content}
+              </div>
+            );
+          }
+        })}
+      </div>
     );
-  };
+  }
 
-  return <>{renderMessageParts()}</>;
+  return null;
 }
 
 export function Chatbot() {
-  const { 
-    messages, 
-    input, 
-    handleInputChange, 
-    handleSubmit, 
-    status, 
-    error, 
-    reload, 
-    stop 
-  } = useChat({
-    api: '/api/chat',
-    onError: (error) => {
-      console.error('Chat error:', error);
-    },
-  });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const isLoading = status === 'submitted' || status === 'streaming';
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(msg => ({
+            role: msg.role,
+            content: msg.content || '',
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Parse the structured response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          fullResponse += decoder.decode(value);
+        }
+      }
+
+      // Extract JSON from response (handle cases where model adds extra text)
+      let jsonResponse = fullResponse;
+
+      // Remove any content before the first {
+      const startIndex = fullResponse.indexOf('{');
+      if (startIndex !== -1) {
+        jsonResponse = fullResponse.substring(startIndex);
+      }
+
+      // Find the last } to get the complete JSON object
+      const endIndex = jsonResponse.lastIndexOf('}');
+      if (endIndex !== -1) {
+        jsonResponse = jsonResponse.substring(0, endIndex + 1);
+      }
+
+      // Parse the JSON response
+      const mermaidResponse: MermaidResponse = JSON.parse(jsonResponse);
+
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        mermaidResponse,
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err) {
+      console.error('Chat error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto bg-white dark:bg-gray-950">
+    <div className="flex flex-col h-screen mx-auto bg-white dark:bg-gray-950">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-800 p-4">
         <div className="flex items-center justify-between">
@@ -315,7 +289,7 @@ export function Chatbot() {
               <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
                 <span className="text-sm">
-                  {status === 'submitted' ? 'Thinking...' : 'Typing...'}
+                  Generating diagram...
                 </span>
               </div>
             </div>
@@ -331,10 +305,10 @@ export function Chatbot() {
               Something went wrong. Please try again.
             </div>
             <button
-              onClick={() => reload()}
+              onClick={() => setError(null)}
               className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm font-medium"
             >
-              Retry
+              Dismiss
             </button>
           </div>
         </div>
