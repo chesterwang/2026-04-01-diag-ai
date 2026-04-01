@@ -265,7 +265,7 @@ export function Chatbot() {
             }`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              className={`max-w-xl lg:max-w-4xl px-4 py-2 rounded-lg ${
                 message.role === 'user'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'

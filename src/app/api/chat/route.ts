@@ -1,15 +1,22 @@
 import { streamObject } from "ai";
 import { groq } from "@ai-sdk/groq";
+import { createMoonshotAI } from '@ai-sdk/moonshotai';
 import { z } from "zod";
+
+const moonshotai = createMoonshotAI({
+  apiKey: "sk-99LcwQMmtkMui0K5kzzZ932gh7eqNVCVib7u6Jd1dC431stm",
+  baseURL: "https://api.moonshot.cn/v1",
+
+});
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 // Zod schema for structured Mermaid diagram output
 const mermaidDiagramSchema = z.object({
-  mermaidCode: z.string().describe("The complete Mermaid diagram syntax. Do not put extraneous content."),
+  title: z.string().describe("A descriptive title for the diagram"),
   thinking: z.string().describe("The AI agent's reasoning process and explanation of the diagram"),
-  title: z.string().describe("A descriptive title for the diagram")
+  mermaidCode: z.string().describe("The complete Mermaid diagram syntax. Do not put extraneous content.")
 });
 
 
@@ -18,9 +25,9 @@ export async function POST(request: Request): Promise<Response> {
     const { messages } = await request.json();
 
     // Check for required environment variables
-    if (!process.env.GROQ_API_KEY) {
-      throw new Error("GROQ_API_KEY environment variable is required");
-    }
+    // if (!process.env.GROQ_API_KEY) {
+    //   throw new Error("GROQ_API_KEY environment variable is required");
+    // }
 
     // System message for Mermaid-focused chatbot
     const systemMessage = `You are a helpful AI assistant specialized in creating Mermaid diagrams.
@@ -53,8 +60,11 @@ You can create various types of Mermaid diagrams including:
 Always ensure the Mermaid syntax is valid and follows proper formatting.`;
 
     // Stream the structured object response using Groq
+
+
+
     const result = streamObject({
-      model: groq("qwen/qwen3-32b"),
+      model: moonshotai("kimi-k2.5"),
       system: systemMessage,
       messages,
       schema: mermaidDiagramSchema,
